@@ -1,0 +1,44 @@
+# Full ops stack: Postgres + worker pool + Prometheus + Grafana.
+#   docker compose up --build
+# Enqueue work from the host:  go run ./cmd/enqueue -dsn "$QUEUE_DSN" -payload '{"x":1}'
+# Grafana: http://localhost:3000 (anonymous) -> "Job Queue" dashboard.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: queue
+      POSTGRES_PASSWORD: queue
+      POSTGRES_DB: queue
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U queue"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    build: .
+    command: ["-workers", "4", "-metrics-addr", ":2112"]
+    environment:
+      QUEUE_DSN: postgres://queue:queue@postgres:5432/queue?sslmode=disable
+    ports: ["2112:2112"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]

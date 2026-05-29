@@ -1,0 +1,39 @@
+{
+  "title": "Job Queue",
+  "uid": "jobqueue",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "title": "Queue depth by state", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [ { "expr": "queue_depth", "legendFormat": "{{state}}" } ]
+    },
+    {
+      "id": 2, "title": "Claim / retry / dead rates (per sec)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "rate(jobs_claimed_total[1m])", "legendFormat": "claimed" },
+        { "expr": "rate(jobs_retried_total[1m])", "legendFormat": "retried" },
+        { "expr": "rate(jobs_dead_total[1m])", "legendFormat": "dead" },
+        { "expr": "rate(jobs_reaped_total[1m])", "legendFormat": "reaped" }
+      ]
+    },
+    {
+      "id": 3, "title": "Handler duration p50/p95/p99 (s)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum(rate(job_duration_seconds_bucket[1m])) by (le))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum(rate(job_duration_seconds_bucket[1m])) by (le))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum(rate(job_duration_seconds_bucket[1m])) by (le))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 4, "title": "Oldest pending age (s)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [ { "expr": "oldest_pending_age_seconds", "legendFormat": "oldest pending" } ]
+    }
+  ]
+}
